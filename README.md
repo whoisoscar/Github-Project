@@ -32,7 +32,7 @@ Pamir Palace models key operations of a hotel, demonstrating parallel computing 
 # Installation & Usage
 **Clone the Repository**
 ``````
-git clone [Repository URL]
+git clone https://github.com/whoisoscar/Pamir-Palace
 ``````
 
 **Setup Environment**
