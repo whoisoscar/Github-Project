@@ -84,6 +84,8 @@ class Guest(threading.Thread):
         if response_time > 3.0:
             print(f"Guest {self.guest_id} drowned due to delayed medical response.")
             self.emergency = True
+            self.active = False  # Deactivate the guest thread
+
         else:
             print(f"Guest {self.guest_id} rescued in time.")
 
@@ -149,6 +151,8 @@ class Guest(threading.Thread):
             if self.active:  # Check if the guest hasn't already checked out
                 print(f"Guest {self.guest_id} is checking out with total expenses: {self.expenses}$")
                 self.active = False  # Prevent further check-out
+                global hotel
+                hotel.daily_earnings += self.expenses
 
         
 # Define the Hotel class
@@ -159,6 +163,7 @@ class Hotel:
         global hotel_guests
         hotel_guests = self.guests.copy()  # Initialize hotel_guests here
         self.day_count = 0
+        self.daily_earnings = 0
 
     def open_for_business(self):
         print("Hotel is now open.")
@@ -178,17 +183,28 @@ class Hotel:
         with self.guests_lock:
             for guest in self.guests:
                 guest.nights_stay -= 1
-                if guest.nights_stay == 0 and not guest.in_excursion and guest.is_alive():
-                    guest.check_out()
+                # Check if the guest's stay has ended
+                if guest.nights_stay == 0:
+                    # If the guest is waiting for the bus excursion or in any excursion, they should be checked out
+                    if guest.in_excursion or (guest in bus_excursion_list):
+                        guest.check_out()
+                        # If they were waiting for the bus, remove them from the list
+                        if guest in bus_excursion_list:
+                            bus_excursion_list.remove(guest)
+                    # If the guest is not in an excursion, also check out
+                    elif guest.is_alive():
+                        guest.check_out()
             
+            # Update the guest list to remove guests who are no longer active
             self.guests = [guest for guest in self.guests if guest.active]
 
-            print(f"\nNumber of guests currently staying: {len(self.guests)}")
-            print(f"\nDaily earnings: {sum(guest.expenses for guest in hotel_guests if not guest.active)}$")
+            print(f"\nNumber of guests currently staying: {len(self.guests)}\nDetailed guest list: {[guest.guest_id for guest in self.guests]}")
+            print(f"\nDaily earnings: {self.daily_earnings}$")
+            self.daily_earnings = 0  # Reset daily earnings for the next day
         
             if len(self.guests) > 0:
                 print(f"\nDay {(self.day_count)+ 1} will begin shortly.\n")
-            
+                
             if len(self.guests) == 0:
                 print("\nHotel is now closed.")
                 print(f"Total earnings: {sum(guest.expenses for guest in hotel_guests)}$")
