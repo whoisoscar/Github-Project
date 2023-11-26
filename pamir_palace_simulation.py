@@ -12,11 +12,11 @@ class HotelConfig:
         self.receptionists = 2
         self.gym_seats = 10
         self.bus_capacity = 20
+        self.max_nights_stay = 5
 
         # Activity costs and probabilities
         self.activity_costs = {'pool': 15, 'dine': 20, 'gym': 10, 'bus_excursion': 30, 'tourist_trip': 0}
         self.activity_probabilities = {'pool': 0.25, 'dine': 0.25, 'gym': 0.2, 'bus_excursion': 0.15, 'tourist_trip': 0.15}
-
 
 class Pool:
     def __init__(self, config):
@@ -29,16 +29,15 @@ class Pool:
             # Simulate pool usage
             time.sleep(random.uniform(0.5, 2.5))
             if random.random() < 0.1:
-                guest.handle_emergency()
+                self.handle_emergency(guest)  # Pass the guest object
             guest.expenses += self.config.activity_costs['pool']
 
-    def handle_emergency(self):
-        print(f"Emergency for Guest {self.guest_id} at the pool!")
+    def handle_emergency(self, guest):
+        print(f"Emergency for Guest {guest.guest_id} at the pool!")
         response_time = random.uniform(1, 5)
         if response_time > 3:
-            print(f"Guest {self.guest_id} has drowned due to delayed response !")
-            self.active = False
-
+            print(f"Guest {guest.guest_id} has drowned due to delayed response !")
+            guest.active = False  # Set the guest's active status to False
 
 class Buffet:
     def __init__(self, config):
@@ -52,21 +51,34 @@ class Buffet:
             time.sleep(random.uniform(1.0, 3.5))
             guest.expenses += self.config.activity_costs['dine']
 
+class Receptionist:
+    def __init__(self, id):
+        self.id = id
+
+    def check_in(self, guest):
+        time.sleep(random.uniform(0.5, 1.5))
+        print(f"Receptionist {self.id} is checking in Guest {guest.guest_id}.")
+        print(f"Guest {guest.guest_id} has checked in for {guest.nights_stay} nights.")
+
+    def check_out(self, guest):
+        print(f"Receptionist {self.id} is checking out Guest {guest.guest_id}. Total expenses: {guest.expenses}$")
+
 class Reception:
-    def __init__(self, receptionist_id, config):
+    def __init__(self, config):
+        self.receptionists = [Receptionist(i) for i in range(config.receptionists)]
         self.reception_semaphore = threading.Semaphore(config.receptionists)
-        self.receptionist_id = receptionist_id
 
     def check_in(self, guest):
         with self.reception_semaphore:
-            time.sleep(random.uniform(0.5, 1.5))
-            print(f"Receptionist {self.receptionist_id} is checking in Guest {guest.guest_id}.")
-            print(f"Guest {guest.guest_id} has checked in for {guest.nights_stay} nights.")
+            # Find an available receptionist
+            available_receptionist = self.receptionists[guest.guest_id % len(self.receptionists)]
+            available_receptionist.check_in(guest)
 
     def check_out(self, guest):
         with self.reception_semaphore:
-            print(f"Guest {guest.guest_id} is checking out. Total expenses: {guest.expenses}$")
-
+            # Find the receptionist who checked in the guest (if needed)
+            available_receptionist = self.receptionists[guest.guest_id % len(self.receptionists)]
+            available_receptionist.check_out(guest)
 
 class Gym:
     def __init__(self, config):
@@ -104,7 +116,6 @@ class BusExcursion:
         self.excursion_list.clear()
         print(f"Bus excursion has returned with guests {[guest.guest_id for guest in self.excursion_list]}.")
 
-
 class TouristTrip:
     def __init__(self, config):
         self.config = config
@@ -124,20 +135,22 @@ class Guest(threading.Thread):
         self.hotel = hotel
         self.config = hotel.config  # Access the configurations through the hotel
         self.expenses = 0
-        self.nights_stay = random.randint(1, 5)
+        self.nights_stay = random.randint(1, self.config.max_nights_stay)
         self.active = True
         
     def run(self):
         try:
             self.hotel.reception.check_in(self)
-            while self.nights_stay > 0:
+            while self.active:
                 activity = self.choose_activity()
                 activity(self)
-                self.nights_stay -= 1
+                if self.decrement_night_stay() == 0:
+                    self.check_out()
+                    break
                 time.sleep(3)  # Time between activities
-            self.hotel.reception.check_out(self)
         except Exception as e:
             print(f"Error in Guest {self.guest_id}: {e}")
+
 
     def choose_activity(self):
 
@@ -150,11 +163,16 @@ class Guest(threading.Thread):
 
         chosen_activity = random.choices(activities, probabilities, k=1)[0]
         return chosen_activity
+    
+    def decrement_night_stay(self):
+        with threading.Lock():
+            if self.nights_stay > 0:
+                self.nights_stay -= 1
+            return self.nights_stay
         
     def check_out(self):
         self.active = False
         self.hotel.reception.check_out(self)
-        print(f"Guest {self.guest_id} is checking out. Total expenses: {self.expenses}$")
 
 class Hotel:
     def __init__(self, num_guests, config):
@@ -166,6 +184,7 @@ class Hotel:
         self.bus_excursion = BusExcursion(config)
         self.tourist_trip = TouristTrip(config)
         self.guests = [Guest(guest_id, self) for guest_id in range(num_guests)]
+        self.daily_earnings = 0
         
     def open_for_business(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.guests)) as executor:
@@ -176,10 +195,14 @@ class Hotel:
     def simulate_days_passing(self):
         while any(guest.active for guest in self.guests):
             time.sleep(20)  # Simulate a day passing
-            for guest in self.guests:
-                guest.nights_stay -= 1
-                if guest.nights_stay <= 0 and guest.active:
-                    guest.check_out()
+            self.daily_earnings = sum(guest.expenses for guest in self.guests if not guest.active)
+            self.end_of_day_report()
+
+
+    def end_of_day_report(self):
+        print(f"\nEnd of Day Report:")
+        print(f"Number of guests currently staying: {len([guest for guest in self.guests if guest.active])}")
+        print(f"Daily earnings: {self.daily_earnings}$")
 # Start the simulation
 
 config = HotelConfig()
