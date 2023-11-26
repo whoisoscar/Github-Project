@@ -139,17 +139,14 @@ class Guest(threading.Thread):
         self.active = True
         
     def run(self):
-        try:
-            self.hotel.reception.check_in(self)
-            while self.active:
-                activity = self.choose_activity()
-                activity(self)
-                if self.decrement_night_stay() == 0:
-                    self.check_out()
-                    break
-                time.sleep(3)  # Time between activities
-        except Exception as e:
-            print(f"Error in Guest {self.guest_id}: {e}")
+        self.hotel.reception.check_in(self)
+        while self.active:
+            activity = self.choose_activity()
+            activity(self)
+            if self.decrement_night_stay() == 0:
+                self.check_out()
+                break
+            time.sleep(3)  # Time between activities
 
 
     def choose_activity(self):
@@ -215,4 +212,3 @@ if __name__ == "__main__":
     
     
     
-#gguiugb
