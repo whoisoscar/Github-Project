@@ -212,3 +212,7 @@ if __name__ == "__main__":
     config = HotelConfig()
     hotel = Hotel(50, config)  # Number of guests
     hotel.open_for_business()
+    
+    
+    
+#gguiugb
