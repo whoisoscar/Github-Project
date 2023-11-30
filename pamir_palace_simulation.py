@@ -38,6 +38,8 @@ class Pool:
                 # Simulate pool usage
                 time.sleep(random.uniform(0.5, 2.5))
                 guest.expenses += self.config.activity_costs['pool_seats']
+                #add expense to hotel's daily earnings
+                hotel.daily_earnings += self.config.activity_costs['pool_seats']
         else:
             print(f"Guest {guest.guest_id} is in the pool.")
             if random.random() < 0.05:
@@ -55,6 +57,8 @@ class Pool:
     def pee_in_the_pool(self, guest):
         print(f"Guest {guest.guest_id} peed in the pool.")
         guest.expenses += self.config.activity_costs['pee_fee']
+        #add expense to hotel's daily earnings
+        hotel.daily_earnings += self.config.activity_costs['pee_fee']
 
 # DO THE RESTAURANT AS THE COFFEE SHOP ASSIGNMENT
 class MenuItem:
@@ -88,6 +92,8 @@ class Chef(threading.Thread):
             print(f"{self.name} is preparing {item.name} for Guest {order.guest.guest_id}.")
             time.sleep(item.preparation_time)
             order.guest.expenses += item.price
+            #add expense to hotel's daily earnings
+            hotel.daily_earnings += item.price
 
 class Buffet:
     def __init__(self, config):
@@ -129,6 +135,8 @@ class Buffet:
                     # Simulate dining
                     time.sleep(random.uniform(1.0, 3.5))
                     guest.expenses += self.config.activity_costs['dine']
+                    #add expense to hotel's daily earnings
+                    hotel.daily_earnings += self.config.activity_costs['dine']
 
 
 class Receptionist:
@@ -171,6 +179,8 @@ class Gym:
             # Simulate gym usage
             time.sleep(random.uniform(0.5, 2.0))
             guest.expenses += self.config.activity_costs['gym']
+            #add expense to hotel's daily earnings
+            hotel.daily_earnings += self.config.activity_costs['gym']
 
 class BusExcursion:
     def __init__(self, config):
@@ -181,10 +191,11 @@ class BusExcursion:
     def join(self, guest):
         with self.lock:
             if len(self.excursion_list) < self.config.bus_capacity:
-                self.excursion_list.append(guest)
-                print(f"Guest {guest.guest_id} has shown interest for the bus excursion, there are currently {len(self.excursion_list)} guests interested, {self.config.bus_capacity - len(self.excursion_list)} missing for the bus to depart.")
-                if len(self.excursion_list) == self.config.bus_capacity:
-                    self.start()
+                if guest not in self.excursion_list:
+                    self.excursion_list.append(guest)
+                    print(f"Guest {guest.guest_id} has shown interest for the bus excursion, there are currently {len(self.excursion_list)} guests interested, {self.config.bus_capacity - len(self.excursion_list)} missing for the bus to depart.")
+                    if len(self.excursion_list) == self.config.bus_capacity:
+                        self.start()
             else:
                 print(f"Guest {guest.guest_id} cannot join now, bus is full.")
 
@@ -193,6 +204,8 @@ class BusExcursion:
         time.sleep(1)  # Simulate excursion duration
         for guest in self.excursion_list:
             guest.expenses += self.config.activity_costs['bus_excursion']
+            #add expense to hotel's daily earnings
+            hotel.daily_earnings += self.config.activity_costs['bus_excursion']
         self.excursion_list.clear()
         print(f"Bus excursion has returned with guests {[guest.guest_id for guest in self.excursion_list]}.")
 
@@ -206,7 +219,11 @@ class TouristTrip:
         trip_duration = random.uniform(0.5, 2.0)
         time.sleep(trip_duration)
         guest.expenses += self.config.activity_costs['tourist_trip']
-        print(f"Guest {guest.guest_id} has returned from the tourist trip.")
+        #add expense to hotel's daily earnings
+        hotel.daily_earnings += self.config.activity_costs['tourist_trip']
+
+        if guest.active:
+            print(f"Guest {guest.guest_id} has returned from the tourist trip.")
 
 class Guest(threading.Thread):
     def __init__(self, guest_id, hotel):
@@ -227,10 +244,8 @@ class Guest(threading.Thread):
             while self.active:
                 activity = self.choose_activity()
                 activity(self)
-                if self.decrement_night_stay() == 0:
-                    self.check_out()
-                    break
-                time.sleep(3)  # Time between activities
+                
+                time.sleep(1.5)  # Time between activities
         except Exception as e:
             print(f"Error in Guest {self.guest_id}: {e}")
 
@@ -277,16 +292,22 @@ class Hotel:
             with self.premium_room_semaphore:
                 print(f"Guest {guest.guest_id} is staying in a premium room.")
                 guest.expenses += guest.config.room_costs['premium_room']
+                #add expense to hotel's daily earnings
+                hotel.daily_earnings += guest.config.room_costs['premium_room']
 
         elif guest.guest_income <= 500000:
             with self.deluxe_room_semaphore:
                 print(f"Guest {guest.guest_id} is staying in a deluxe room.")
                 guest.expenses += guest.config.room_costs['deluxe_room']
+                #add expense to hotel's daily earnings
+                hotel.daily_earnings += guest.config.room_costs['deluxe_room']
         
         elif guest.guest_income > 500000:
             with self.standard_room_semaphore:
                 print(f"Guest {guest.guest_id} is staying in a standard room.")
                 guest.expenses += guest.config.room_costs['standard_room']
+                #add expense to hotel's daily earnings
+                hotel.daily_earnings += guest.config.room_costs['standard_room']
         else:
             print(f"No rooms available for Guest {guest.guest_id}.")
         
@@ -297,19 +318,28 @@ class Hotel:
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.guests)) as executor:
             for guest in self.guests:
                 executor.submit(guest.run)
-        self.simulate_days_passing()
-        self.buffet.close_buffet()  # Stop the chefs
+            self.simulate_days_passing()
+            self.buffet.close_buffet()  # Stop the chefs
 
     def simulate_days_passing(self):
         while any(guest.active for guest in self.guests):
             time.sleep(20)  # Simulate a day passing
-            self.daily_earnings = sum(guest.expenses for guest in self.guests if not guest.active)
+            #decrement everyone's nights stay
+            for guest in self.guests:
+                #if nights stay is 0, check out
+                if guest.decrement_night_stay() == 0:
+                    guest.check_out()
+
             self.end_of_day_report()
+            self.daily_earnings = 0
+        print(f"\n---------------------\nEnd of simulation. Total earnings: {sum(guest.expenses for guest in self.guests)}$\n---------------------")
+        #print number of active guests
+        print(f"Number of guests currently staying: {len([guest for guest in self.guests if guest.active])}")
 
     def end_of_day_report(self):
-        print(f"\nEnd of Day Report:")
+        print(f"\n---------------------\nEnd of Day Report:")
         print(f"Number of guests currently staying: {len([guest for guest in self.guests if guest.active])}")
-        print(f"Daily earnings: {self.daily_earnings}$")
+        print(f"Daily earnings: {self.daily_earnings}$\n---------------------\n")
 # Start the simulation
 
 config = HotelConfig()
