@@ -17,6 +17,7 @@ class HotelConfig:
         self.standard_room = 30 #NEW
         self.deluxe_room = 15 #NEW 
         self.premium_room = 5 #NEW
+        self.time_between_activities = 1.5
 
         # Activity costs and probabilities
         self.room_costs = {'premium_room': 300, 'deluxe_room': 250, 'standard_room': 200} #NEW
@@ -144,7 +145,7 @@ class Receptionist:
         self.id = id
 
     def check_in(self, guest):
-        time.sleep(random.uniform(0.5, 1.5))
+        time.sleep(random.uniform(config.time_between_activities))
         print(f"Receptionist {self.id} is checking in Guest {guest.guest_id}.")
         print(f"Guest {guest.guest_id} has checked in for {guest.nights_stay} nights.")
 
@@ -245,7 +246,7 @@ class Guest(threading.Thread):
                 activity = self.choose_activity()
                 activity(self)
                 
-                time.sleep(1.5)  # Time between activities
+                time.sleep(self.time_between_activities)
         except Exception as e:
             print(f"Error in Guest {self.guest_id}: {e}")
 
@@ -319,13 +320,14 @@ class Hotel:
             for guest in self.guests:
                 executor.submit(guest.run)
             self.simulate_days_passing()
-            self.buffet.close_buffet()  # Stop the chefs
+        
+        self.buffet.close_buffet()  # Stop the chefs
 
     def simulate_days_passing(self):
         while any(guest.active for guest in self.guests):
             time.sleep(20)  # Simulate a day passing
             #decrement everyone's nights stay
-            for guest in self.guests:
+            for guest in [guest for guest in self.guests if guest.active]:
                 #if nights stay is 0, check out
                 if guest.decrement_night_stay() == 0:
                     guest.check_out()
