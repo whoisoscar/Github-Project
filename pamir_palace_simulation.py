@@ -4,6 +4,14 @@ import queue
 import random
 import concurrent.futures
 
+# Global dictionary to track waiting times
+waiting_times = {
+    'check_in': {'total_time': 0, 'count': 0},
+    'check_out': {'total_time': 0, 'count': 0},
+    'gym': {'total_time': 0, 'count': 0},
+    'pool': {'total_time': 0, 'count': 0},
+    'dine': {'total_time': 0, 'count': 0}
+}
 
 class HotelConfig:
     def __init__(self):
@@ -30,18 +38,26 @@ class Pool:
         self.pool_seats_semaphore = threading.Semaphore(config.pool_seats)
     
     def use(self, guest):
-        if random.random() < 0.3:
-            if self.pool_seats_semaphore._value == 0: # Check if the pool is full
-                print(f"Guest {guest.guest_id} is waiting to use the pool seats")
-
-            with self.pool_seats_semaphore:
+        if random.random() < 0.5:
+            #To actually sit by the pool
+            start_time = time.time()  # Start timing
+            print(f"Guest {guest.guest_id} is waiting to use the pool seats")
+            while not self.pool_seats_semaphore.acquire(blocking=False):
+                time.sleep(0.001)
+            end_time = time.time()  # End timing
+            waiting_times['pool']['total_time'] += (end_time - start_time)
+            waiting_times['pool']['count'] += 1
+            try:
                 print(f"Guest {guest.guest_id} is using the pool seat.")
                 # Simulate pool usage
                 time.sleep(random.uniform(0.1, 3))
                 guest.expenses += self.config.activity_costs['pool_seats']
                 #add expense to hotel's daily earnings
                 hotel.daily_earnings += self.config.activity_costs['pool_seats']
+            finally:
+                self.pool_seats_semaphore.release()
         else:
+            #to go stright into the water
             print(f"Guest {guest.guest_id} is in the pool.")
             if random.random() < 0.05:
                 self.handle_emergency(guest)  # Pass the guest object
@@ -106,6 +122,23 @@ class Buffet:
             MenuItem("Steak", 25.0, 0.3),
             MenuItem("Salad", 10.0, 0.15),
             MenuItem("Dessert", 8.0, 0.15),
+            MenuItem("Soup", 12.0, 0.2),
+            MenuItem("Pizza", 15.0, 0.25),
+            MenuItem("Burger", 18.0, 0.3),
+            MenuItem("Pasta", 20.0, 0.25),
+            MenuItem("Sushi", 30.0, 0.35),
+            MenuItem("Chicken", 22.0, 0.3),
+            MenuItem("Fish", 28.0, 0.35),
+            MenuItem("Rice", 10.0, 0.2),
+            MenuItem("Sandwich", 15.0, 0.25),
+            MenuItem("Ice Cream", 8.0, 0.15),
+            MenuItem("Coffee", 5.0, 0.1),
+            MenuItem("Tea", 4.0, 0.1),
+            MenuItem("Juice", 6.0, 0.15),
+            MenuItem("Pancakes", 12.0, 0.2),
+            MenuItem("Waffles", 14.0, 0.25),
+            MenuItem("Omelette", 16.0, 0.3),
+            MenuItem("Fried Rice", 18.0, 0.3),
         ]
         self.chefs = [Chef(f"Chef {i+1}", self.order_queue) for i in range(2)]  # Assume there are two chefs
     
@@ -121,14 +154,21 @@ class Buffet:
     def order_menu(self, guest):
         # Here you can implement the logic for a guest to choose items from the menu
         # and create an Order object to put in the order_queue
-        chosen_items = random.sample(self.menu_items, k=random.randint(1, len(self.menu_items)))
+        chosen_items = random.sample(self.menu_items, k=random.randint(1, 5))
         order = Order(guest, chosen_items)
         self.order_queue.put(order)
         print(f"Guest {guest.guest_id} has placed an order for {[item.name for item in chosen_items]}.")
 
 
     def dine(self, guest):
-            with self.buffet_seats_semaphore:
+            start_time = time.time()  # Start timing
+            print(f"Guest {guest.guest_id} is waiting to use the restaurant.")
+            while not self.buffet_seats_semaphore.acquire(blocking=False):
+                time.sleep(0.001)
+            end_time = time.time()  # End timing
+            waiting_times['dine']['total_time'] += (end_time - start_time)
+            waiting_times['dine']['count'] += 1
+            try:
                 if random.random() < 0.4:
                     self.order_menu(guest)
                 else:
@@ -138,7 +178,8 @@ class Buffet:
                     guest.expenses += self.config.activity_costs['dine']
                     #add expense to hotel's daily earnings
                     hotel.daily_earnings += self.config.activity_costs['dine']
-
+            finally:
+                self.buffet_seats_semaphore.release()
 
 class Receptionist:
     def __init__(self, id):
@@ -158,16 +199,34 @@ class Reception:
         self.reception_semaphore = threading.Semaphore(config.receptionists)
 
     def check_in(self, guest):
-        with self.reception_semaphore:
+        start_time = time.time()  # Start timing
+        print(f"Guest {guest.guest_id} is waiting to be checked in.")
+        while not self.reception_semaphore.acquire(blocking=False):
+            time.sleep(0.001)
+        end_time = time.time()  # End timing
+        waiting_times['check_in']['total_time'] += (end_time - start_time)
+        waiting_times['check_in']['count'] += 1
+        try:
             # Find an available receptionist
             available_receptionist = self.receptionists[guest.guest_id % len(self.receptionists)]
             available_receptionist.check_in(guest)
+        finally:
+            self.reception_semaphore.release()
 
     def check_out(self, guest):
-        with self.reception_semaphore:
+        start_time = time.time()  # Start timing
+        print(f"Guest {guest.guest_id} is waiting to be checked out.")
+        while not self.reception_semaphore.acquire(blocking=False):
+            time.sleep(0.001)
+        end_time = time.time()  # End timing
+        waiting_times['check_out']['total_time'] += (end_time - start_time)
+        waiting_times['check_out']['count'] += 1
+        try:
             # Find the receptionist who checked in the guest (if needed)
             available_receptionist = self.receptionists[guest.guest_id % len(self.receptionists)]
             available_receptionist.check_out(guest)
+        finally:
+            self.reception_semaphore.release()
 
 class Gym:
     def __init__(self, config):
@@ -175,9 +234,13 @@ class Gym:
         self.gym_seats_semaphore = threading.Semaphore(config.gym_seats)
     
     def use(self, guest):
+        start_time = time.time()  # Start timing
         print(f"Guest {guest.guest_id} is waiting to use the gym.")
         while not self.gym_seats_semaphore.acquire(blocking=False):
             time.sleep(0.001)
+        end_time = time.time()  # End timing
+        waiting_times['pool']['total_time'] += (end_time - start_time)
+        waiting_times['pool']['count'] += 1
         try:
             print(f"Guest {guest.guest_id} is using the gym.")
             # Simulate gym usage
@@ -212,8 +275,9 @@ class BusExcursion:
             guest.expenses += self.config.activity_costs['bus_excursion']
             #add expense to hotel's daily earnings
             hotel.daily_earnings += self.config.activity_costs['bus_excursion']
-        self.excursion_list.clear()
+        
         print(f"Bus excursion has returned with guests {[guest.guest_id for guest in self.excursion_list]}.")
+        self.excursion_list.clear()
 
 class TouristTrip:
     def __init__(self, config):
@@ -294,29 +358,48 @@ class Hotel:
         self.standard_room_semaphore = threading.Semaphore(config.standard_room)
     
     def room_choice(self, guest):
-        if guest.guest_income <= 150000: 
-            with self.premium_room_semaphore:
+        if guest.guest_income <= 150000:
+            if self.premium_room_semaphore.acquire(blocking=False):
                 print(f"Guest {guest.guest_id} is staying in a premium room.")
                 guest.expenses += guest.config.room_costs['premium_room']
-                #add expense to hotel's daily earnings
+                # add expense to hotel's daily earnings
                 hotel.daily_earnings += guest.config.room_costs['premium_room']
-
-        elif guest.guest_income <= 500000:
-            with self.deluxe_room_semaphore:
+            elif self.deluxe_room_semaphore.acquire(blocking=False):
                 print(f"Guest {guest.guest_id} is staying in a deluxe room.")
                 guest.expenses += guest.config.room_costs['deluxe_room']
-                #add expense to hotel's daily earnings
+                # add expense to hotel's daily earnings
                 hotel.daily_earnings += guest.config.room_costs['deluxe_room']
-        
-        elif guest.guest_income > 500000:
-            with self.standard_room_semaphore:
+            elif self.standard_room_semaphore.acquire(blocking=False):
                 print(f"Guest {guest.guest_id} is staying in a standard room.")
                 guest.expenses += guest.config.room_costs['standard_room']
-                #add expense to hotel's daily earnings
+                # add expense to hotel's daily earnings
                 hotel.daily_earnings += guest.config.room_costs['standard_room']
+            else:
+                print(f"No rooms available for Guest {guest.guest_id}.")
+        elif guest.guest_income <= 500000:
+            if self.deluxe_room_semaphore.acquire(blocking=False):
+                print(f"Guest {guest.guest_id} is staying in a deluxe room.")
+                guest.expenses += guest.config.room_costs['deluxe_room']
+                # add expense to hotel's daily earnings
+                hotel.daily_earnings += guest.config.room_costs['deluxe_room']
+            elif self.standard_room_semaphore.acquire(blocking=False):
+                print(f"Guest {guest.guest_id} is staying in a standard room.")
+                guest.expenses += guest.config.room_costs['standard_room']
+                # add expense to hotel's daily earnings
+                hotel.daily_earnings += guest.config.room_costs['standard_room']
+            else:
+                print(f"No rooms available for Guest {guest.guest_id}.")
+        elif guest.guest_income > 500000:
+            if self.standard_room_semaphore.acquire(blocking=False):
+                print(f"Guest {guest.guest_id} is staying in a standard room.")
+                guest.expenses += guest.config.room_costs['standard_room']
+                # add expense to hotel's daily earnings
+                hotel.daily_earnings += guest.config.room_costs['standard_room']
+            else:
+                print(f"No rooms available for Guest {guest.guest_id}.")
         else:
             print(f"No rooms available for Guest {guest.guest_id}.")
-        
+
         return
 
     def open_for_business(self):
@@ -342,12 +425,20 @@ class Hotel:
         print(f"\n---------------------\nEnd of simulation. Total earnings: {sum(guest.expenses for guest in self.guests)}$\n---------------------")
         #print number of active guests
         print(f"Number of guests currently staying: {len([guest for guest in self.guests if guest.active])}")
+        print_average_waiting_times()
 
     def end_of_day_report(self):
         print(f"\n---------------------\nEnd of Day Report:")
         print(f"Number of guests currently staying: {len([guest for guest in self.guests if guest.active])}")
         print(f"Daily earnings: {self.daily_earnings}$\n---------------------\n")
 # Start the simulation
+
+
+def print_average_waiting_times():
+    print("\nAverage Waiting Times:")
+    for activity, times in waiting_times.items():
+        average_time = times['total_time'] / times['count'] if times['count'] > 0 else 0
+        print(f"{activity.capitalize()}: {average_time:.2f} seconds")
 
 config = HotelConfig()
 
