@@ -17,7 +17,7 @@ class HotelConfig:
     def __init__(self):
         # Constants for the number of resources
         self.pool_seats = 15
-        self.buffet_seats = 7
+        self.restaurant_seats = 7
         self.receptionists = 2
         self.gym_seats = 3
         self.bus_capacity = 20
@@ -35,34 +35,36 @@ class HotelConfig:
 class Pool:
     def __init__(self, config):
         self.config = config
+        self.lock = threading.Lock()
         self.pool_seats_semaphore = threading.Semaphore(config.pool_seats)
     
     def use(self, guest):
-        if random.random() < 0.5:
-            #To actually sit by the pool
-            start_time = time.time()  # Start timing
-            print(f"Guest {guest.guest_id} is waiting to use the pool seats")
-            while not self.pool_seats_semaphore.acquire(blocking=False):
-                time.sleep(0.001)
-            end_time = time.time()  # End timing
-            waiting_times['pool']['total_time'] += (end_time - start_time)
-            waiting_times['pool']['count'] += 1
-            try:
-                print(f"Guest {guest.guest_id} is using the pool seat.")
-                # Simulate pool usage
-                time.sleep(random.uniform(0.1, 3))
-                guest.expenses += self.config.activity_costs['pool_seats']
-                #add expense to hotel's daily earnings
-                hotel.daily_earnings += self.config.activity_costs['pool_seats']
-            finally:
-                self.pool_seats_semaphore.release()
-        else:
-            #to go stright into the water
-            print(f"Guest {guest.guest_id} is in the pool.")
-            if random.random() < 0.05:
-                self.handle_emergency(guest)  # Pass the guest object
-            if random.random() <0.1:
-                self.pee_in_the_pool(guest)
+        with self.lock:
+            if random.random() < 0.5:
+                #To actually sit by the pool
+                start_time = time.time()  # Start timing
+                print(f"Guest {guest.guest_id} is waiting to use the pool seats")
+                while not self.pool_seats_semaphore.acquire(blocking=False):
+                    time.sleep(0.001)
+                end_time = time.time()  # End timing
+                waiting_times['pool']['total_time'] += (end_time - start_time)
+                waiting_times['pool']['count'] += 1
+                try:
+                    print(f"Guest {guest.guest_id} is using the pool seat.")
+                    # Simulate pool usage
+                    time.sleep(random.uniform(0.1, 3))
+                    guest.expenses += self.config.activity_costs['pool_seats']
+                    #add expense to hotel's daily earnings
+                    hotel.daily_earnings += self.config.activity_costs['pool_seats']
+                finally:
+                    self.pool_seats_semaphore.release()
+            else:
+                #to go stright into the water
+                print(f"Guest {guest.guest_id} is in the pool.")
+                if random.random() < 0.05:
+                    self.handle_emergency(guest)  # Pass the guest object
+                if random.random() <0.1:
+                    self.pee_in_the_pool(guest)
 
     def handle_emergency(self, guest):
         print(f"Emergency for Guest {guest.guest_id} at the pool!")
@@ -70,7 +72,8 @@ class Pool:
         if response_time > 4:
             print(f"Guest {guest.guest_id} has drowned due to delayed response!")
             guest.active = False  # Set the guest's active status to False
-    
+        else:
+            print(f"Guest {guest.guest_id} has been saved by the lifeguard as they responded on time.")
     def pee_in_the_pool(self, guest):
         print(f"Guest {guest.guest_id} peed in the pool.")
         guest.expenses += self.config.activity_costs['pee_fee']
@@ -108,15 +111,18 @@ class Chef(threading.Thread):
         for item in order.items:
             print(f"{self.name} is preparing {item.name} for Guest {order.guest.guest_id}.")
             time.sleep(item.preparation_time)
+            print(f"{self.name} has finished preparing {item.name} for Guest {order.guest.guest_id}.")
             order.guest.expenses += item.price
             #add expense to hotel's daily earnings
             hotel.daily_earnings += item.price
 
-class Buffet:
+class Restaurant:
     def __init__(self, config):
         self.config = config
-        self.buffet_seats_semaphore = threading.Semaphore(config.buffet_seats)
+        self.lock = threading.Lock() 
+        self.restaurant_seats_semaphore = threading.Semaphore(config.restaurant_seats)
         self.order_queue = queue.Queue()
+        self.order_lock = threading.Lock()
 
         self.menu_items = [
             MenuItem("Steak", 25.0, 0.3),
@@ -142,11 +148,11 @@ class Buffet:
         ]
         self.chefs = [Chef(f"Chef {i+1}", self.order_queue) for i in range(2)]  # Assume there are two chefs
     
-    def open_buffet(self):
+    def open_restaurant(self):
         for chef in self.chefs:
             chef.start()
 
-    def close_buffet(self):
+    def close_restaurant(self):
         for _ in self.chefs:
             self.order_queue.put(None)  # Send the stop signal to each chef
 
@@ -161,25 +167,32 @@ class Buffet:
 
 
     def dine(self, guest):
+        with self.lock:
             start_time = time.time()  # Start timing
             print(f"Guest {guest.guest_id} is waiting to use the restaurant.")
-            while not self.buffet_seats_semaphore.acquire(blocking=False):
+            while not self.restaurant_seats_semaphore.acquire(blocking=False):
                 time.sleep(0.001)
             end_time = time.time()  # End timing
             waiting_times['dine']['total_time'] += (end_time - start_time)
             waiting_times['dine']['count'] += 1
             try:
                 if random.random() < 0.4:
-                    self.order_menu(guest)
+                    print(f"Guest {guest.guest_id} is ordering from the menu.")
+                    with self.order_lock:
+                        self.order_menu(guest)
+                        total_prep_time = sum(item.preparation_time for item in guest.order.items)
+                        time.sleep(total_prep_time)
+                        print(f"Guest {guest.guest_id}'s order is ready.")
                 else:
                     print(f"Guest {guest.guest_id} is dining from the buffet.")
                     # Simulate dining
                     time.sleep(random.uniform(0.6, 2))
+                    print(f"Guest {guest.guest_id} has finished dining in the buffet.")
                     guest.expenses += self.config.activity_costs['dine']
-                    #add expense to hotel's daily earnings
+                    # add expense to hotel's daily earnings
                     hotel.daily_earnings += self.config.activity_costs['dine']
             finally:
-                self.buffet_seats_semaphore.release()
+                self.restaurant_seats_semaphore.release()
 
 class Receptionist:
     def __init__(self, id):
@@ -306,6 +319,7 @@ class Guest(threading.Thread):
         self.expenses = 0
         self.nights_stay = random.randint(1, self.config.max_nights_stay)
         self.active = True
+        
     
     def run(self):
         try:
@@ -322,7 +336,7 @@ class Guest(threading.Thread):
 
     def choose_activity(self):
 
-        activities = [self.hotel.pool.use, self.hotel.buffet.dine, self.hotel.gym.use, 
+        activities = [self.hotel.pool.use, self.hotel.restaurant.dine, self.hotel.gym.use, 
                         self.hotel.bus_excursion.join, self.hotel.tourist_trip.join]
         
         probabilities = [self.config.activity_probabilities['pool'], self.config.activity_probabilities['dine'],
@@ -346,7 +360,7 @@ class Hotel:
     def __init__(self, num_guests, config):
         self.config = config
         self.pool = Pool(config)
-        self.buffet = Buffet(config)
+        self.restaurant = Restaurant(config)
         self.reception = Reception(config)
         self.gym = Gym(config)
         self.bus_excursion = BusExcursion(config)
@@ -403,13 +417,13 @@ class Hotel:
         return
 
     def open_for_business(self):
-        self.buffet.open_buffet() # Starts the chefs
+        self.restaurant.open_restaurant() # Starts the chefs
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.guests)) as executor:
             for guest in self.guests:
                 executor.submit(guest.run)
             self.simulate_days_passing()
         
-        self.buffet.close_buffet()  # Stop the chefs
+        self.restaurant.close_restaurant()  # Stop the chefs
 
     def simulate_days_passing(self):
         while any(guest.active for guest in self.guests):
