@@ -17,7 +17,7 @@ class HotelConfig:
     def __init__(self):
         # Constants for the number of resources
         self.pool_seats = 15
-        self.buffet_seats = 15
+        self.buffet_seats = 7
         self.receptionists = 2
         self.gym_seats = 3
         self.bus_capacity = 20
@@ -437,8 +437,25 @@ class Hotel:
 def print_average_waiting_times():
     print("\nAverage Waiting Times:")
     for activity, times in waiting_times.items():
-        average_time = times['total_time'] / times['count'] if times['count'] > 0 else 0
-        print(f"{activity.capitalize()}: {average_time:.2f} seconds")
+        # Calculate average time in seconds
+        average_time_seconds = times['total_time'] / times['count'] if times['count'] > 0 else 0
+
+        # Convert to simulation time (1 real second = 1 simulation hour)
+        average_time_hours = average_time_seconds  # 1 second = 1 hour in simulation
+
+        # Format the time for display
+        if average_time_hours >= 1:
+            # Display in hours if more than or equal to 1 hour
+            display_time = f"{average_time_hours:.2f} hour(s)"
+        elif average_time_hours * 60 >= 1:
+            # Convert to minutes if less than an hour but more than or equal to 1 minute
+            display_time = f"{average_time_hours * 60:.2f} minute(s)"
+        else:
+            # Convert to seconds if less than a minute
+            display_time = f"{average_time_hours * 3600:.2f} second(s)"
+
+        print(f"{activity.capitalize()}: {display_time}")
+
 
 config = HotelConfig()
 
