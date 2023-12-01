@@ -3,6 +3,9 @@ import time
 import queue
 import random
 import concurrent.futures
+import uuid
+
+import sql_database
 
 # Global dictionary to track waiting times
 waiting_times = {
@@ -29,7 +32,7 @@ class HotelConfig:
 
         # Activity costs and probabilities
         self.room_costs = {'premium_room': 300, 'deluxe_room': 250, 'standard_room': 200} #NEW
-        self.activity_costs = {'pool_seats': 15, 'pee_fee': 30, 'dine': 20, 'gym': 10, 'bus_excursion': 30, 'tourist_trip': 0}
+        self.activity_costs = {'pool_seats': 15, 'pee_fee': 30, 'buffet': 20, 'gym': 10, 'bus_excursion': 30, 'tourist_trip': 0}
         self.activity_probabilities = {'pool': 0.25, 'dine': 0.25, 'gym': 0.2, 'bus_excursion': 0.15, 'tourist_trip': 0.15}
 
 class Pool:
@@ -161,6 +164,7 @@ class Restaurant:
         # Here you can implement the logic for a guest to choose items from the menu
         # and create an Order object to put in the order_queue
         chosen_items = random.sample(self.menu_items, k=random.randint(1, 5))
+        guest.order_items = chosen_items
         order = Order(guest, chosen_items)
         self.order_queue.put(order)
         print(f"Guest {guest.guest_id} has placed an order for {[item.name for item in chosen_items]}.")
@@ -180,17 +184,19 @@ class Restaurant:
                     print(f"Guest {guest.guest_id} is ordering from the menu.")
                     with self.order_lock:
                         self.order_menu(guest)
-                        total_prep_time = sum(item.preparation_time for item in guest.order.items)
+                        total_prep_time = sum(item.preparation_time for item in guest.order_items)
                         time.sleep(total_prep_time)
                         print(f"Guest {guest.guest_id}'s order is ready.")
+                        #reset guest order items
+                        guest.order_items = []
                 else:
                     print(f"Guest {guest.guest_id} is dining from the buffet.")
                     # Simulate dining
                     time.sleep(random.uniform(0.6, 2))
                     print(f"Guest {guest.guest_id} has finished dining in the buffet.")
-                    guest.expenses += self.config.activity_costs['dine']
+                    guest.expenses += self.config.activity_costs['buffet']
                     # add expense to hotel's daily earnings
-                    hotel.daily_earnings += self.config.activity_costs['dine']
+                    hotel.daily_earnings += self.config.activity_costs['buffet']
             finally:
                 self.restaurant_seats_semaphore.release()
 
@@ -319,6 +325,7 @@ class Guest(threading.Thread):
         self.expenses = 0
         self.nights_stay = random.randint(1, self.config.max_nights_stay)
         self.active = True
+        self.order_items = []
         
     
     def run(self):
@@ -379,11 +386,17 @@ class Hotel:
                 # add expense to hotel's daily earnings
                 hotel.daily_earnings += guest.config.room_costs['premium_room']
             elif self.deluxe_room_semaphore.acquire(blocking=False):
+                #add downgrade to export_data
+                export_data['downgraded_from_premium'] += 1
+
                 print(f"Guest {guest.guest_id} is staying in a deluxe room.")
                 guest.expenses += guest.config.room_costs['deluxe_room']
                 # add expense to hotel's daily earnings
                 hotel.daily_earnings += guest.config.room_costs['deluxe_room']
             elif self.standard_room_semaphore.acquire(blocking=False):
+                #add downgrade to export_data
+                export_data['downgraded_from_deluxe'] += 1
+
                 print(f"Guest {guest.guest_id} is staying in a standard room.")
                 guest.expenses += guest.config.room_costs['standard_room']
                 # add expense to hotel's daily earnings
@@ -397,6 +410,9 @@ class Hotel:
                 # add expense to hotel's daily earnings
                 hotel.daily_earnings += guest.config.room_costs['deluxe_room']
             elif self.standard_room_semaphore.acquire(blocking=False):
+                #add downgrade to export_data
+                export_data['downgraded_from_deluxe'] += 1
+
                 print(f"Guest {guest.guest_id} is staying in a standard room.")
                 guest.expenses += guest.config.room_costs['standard_room']
                 # add expense to hotel's daily earnings
@@ -441,6 +457,9 @@ class Hotel:
         print(f"Number of guests currently staying: {len([guest for guest in self.guests if guest.active])}")
         print_average_waiting_times()
 
+        #save total earnings to export_data
+        export_data['total_revenue'] = sum(guest.expenses for guest in self.guests)
+
     def end_of_day_report(self):
         print(f"\n---------------------\nEnd of Day Report:")
         print(f"Number of guests currently staying: {len([guest for guest in self.guests if guest.active])}")
@@ -469,15 +488,21 @@ def print_average_waiting_times():
             display_time = f"{average_time_hours * 3600:.2f} second(s)"
 
         print(f"{activity.capitalize()}: {display_time}")
+        export_data[f"{activity}_avg_waiting_time"] = display_time
 
 
 config = HotelConfig()
 
 
 if __name__ == "__main__":
+    simulation_uuid = str(uuid.uuid4())
+    export_data = {'simulation_uuid': simulation_uuid, 'downgraded_from_premium': 0, 'downgraded_from_deluxe': 0}
     config = HotelConfig()
     hotel = Hotel(50, config)  # Number of guests
     hotel.open_for_business()
+
+    sql_database.add_data(export_data)
+
     
     
     

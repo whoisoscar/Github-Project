@@ -1,0 +1,2 @@
+simulation_uuid,check_in_avg_waiting_time,check_out_avg_waiting_time,gym_avg_waiting_time,pool_avg_waiting_time,dine_avg_waiting_time,total_revenue,downgraded_from_premium,downgraded_from_deluxe
+d90483a3-e6ca-40a0-b051-b17e5829e287,1.60 hour(s),0.06 second(s),0.00 second(s),6.63 minute(s),0.20 second(s),18212,10,26
