@@ -379,7 +379,7 @@ class Hotel:
         self.standard_room_semaphore = threading.Semaphore(config.standard_room)
     
     def room_choice(self, guest):
-        if guest.guest_income <= 150000:
+        if guest.guest_income > 500000:
             if self.premium_room_semaphore.acquire(blocking=False):
                 print(f"Guest {guest.guest_id} is staying in a premium room.")
                 guest.expenses += guest.config.room_costs['premium_room']
@@ -403,7 +403,7 @@ class Hotel:
                 hotel.daily_earnings += guest.config.room_costs['standard_room']
             else:
                 print(f"No rooms available for Guest {guest.guest_id}.")
-        elif guest.guest_income <= 500000:
+        elif guest.guest_income > 150000:
             if self.deluxe_room_semaphore.acquire(blocking=False):
                 print(f"Guest {guest.guest_id} is staying in a deluxe room.")
                 guest.expenses += guest.config.room_costs['deluxe_room']
@@ -419,7 +419,7 @@ class Hotel:
                 hotel.daily_earnings += guest.config.room_costs['standard_room']
             else:
                 print(f"No rooms available for Guest {guest.guest_id}.")
-        elif guest.guest_income > 500000:
+        else:
             if self.standard_room_semaphore.acquire(blocking=False):
                 print(f"Guest {guest.guest_id} is staying in a standard room.")
                 guest.expenses += guest.config.room_costs['standard_room']
@@ -427,9 +427,6 @@ class Hotel:
                 hotel.daily_earnings += guest.config.room_costs['standard_room']
             else:
                 print(f"No rooms available for Guest {guest.guest_id}.")
-        else:
-            print(f"No rooms available for Guest {guest.guest_id}.")
-
         return
 
     def open_for_business(self):
