@@ -10,10 +10,15 @@ def create_database():
     CREATE TABLE pamir_simulation_data (
         simulation_uuid VARCHAR(255),
         check_in_avg_waiting_time VARCHAR(255),
+        check_in_avg_waiting_time_pretty VARCHAR(255),
         check_out_avg_waiting_time VARCHAR(255),
+        check_out_avg_waiting_time_pretty VARCHAR(255),
         gym_avg_waiting_time VARCHAR(255),
+        gym_avg_waiting_time_pretty VARCHAR(255),
         pool_avg_waiting_time VARCHAR(255),
+        pool_avg_waiting_time_pretty VARCHAR(255),
         dine_avg_waiting_time VARCHAR(255),
+        dine_avg_waiting_time_pretty VARCHAR(255),
         total_revenue INT,
         downgraded_from_premium INT,
         downgraded_from_deluxe INT
@@ -34,9 +39,9 @@ def add_data(data):
     sql_insert = """
     INSERT INTO pamir_simulation_data 
     (simulation_uuid, downgraded_from_premium, downgraded_from_deluxe, 
-     check_in_avg_waiting_time, check_out_avg_waiting_time, gym_avg_waiting_time, 
-     pool_avg_waiting_time, dine_avg_waiting_time, total_revenue) 
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+     check_in_avg_waiting_time, check_in_avg_waiting_time_pretty, check_out_avg_waiting_time, check_out_avg_waiting_time_pretty, gym_avg_waiting_time, gym_avg_waiting_time_pretty, 
+     pool_avg_waiting_time, pool_avg_waiting_time_pretty, dine_avg_waiting_time, dine_avg_waiting_time_pretty, total_revenue) 
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     # Extracting the values from the data dictionary in the same order as the SQL statement
@@ -44,11 +49,16 @@ def add_data(data):
         data['simulation_uuid'], 
         data['downgraded_from_premium'], 
         data['downgraded_from_deluxe'], 
-        data['check_in_avg_waiting_time'], 
-        data['check_out_avg_waiting_time'], 
-        data['gym_avg_waiting_time'], 
-        data['pool_avg_waiting_time'], 
+        data['check_in_avg_waiting_time'],
+        data['check_in_avg_waiting_time_pretty'],
+        data['check_out_avg_waiting_time'],
+        data['check_out_avg_waiting_time_pretty'],
+        data['gym_avg_waiting_time'],
+        data['gym_avg_waiting_time_pretty'],
+        data['pool_avg_waiting_time'],
+        data['pool_avg_waiting_time_pretty'],
         data['dine_avg_waiting_time'], 
+        data['dine_avg_waiting_time_pretty'],
         data['total_revenue']
     )
 
@@ -84,5 +94,5 @@ def save_to_csv():
 
     with open('simulation_data.csv', 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['simulation_uuid', 'check_in_avg_waiting_time', 'check_out_avg_waiting_time', 'gym_avg_waiting_time', 'pool_avg_waiting_time', 'dine_avg_waiting_time', 'total_revenue','downgraded_from_premium', 'downgraded_from_deluxe'])
+        writer.writerow(['simulation_uuid', 'check_in_avg_waiting_time', 'check_in_avg_waiting_time_pretty', 'check_out_avg_waiting_time', 'check_out_avg_waiting_time_pretty', 'gym_avg_waiting_time', 'gym_avg_waiting_time_pretty', 'pool_avg_waiting_time', 'pool_avg_waiting_time_pretty', 'dine_avg_waiting_time', 'dine_avg_waiting_time_pretty', 'total_revenue', 'downgraded_from_premium', 'downgraded_from_deluxe'])
         writer.writerows(myresult)

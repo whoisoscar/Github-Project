@@ -1,2 +1,2 @@
-simulation_uuid,check_in_avg_waiting_time,check_out_avg_waiting_time,gym_avg_waiting_time,pool_avg_waiting_time,dine_avg_waiting_time,total_revenue,downgraded_from_premium,downgraded_from_deluxe
-d90483a3-e6ca-40a0-b051-b17e5829e287,1.60 hour(s),0.06 second(s),0.00 second(s),6.63 minute(s),0.20 second(s),18212,10,26
+simulation_uuid,check_in_avg_waiting_time,check_in_avg_waiting_time_pretty,check_out_avg_waiting_time,check_out_avg_waiting_time_pretty,gym_avg_waiting_time,gym_avg_waiting_time_pretty,pool_avg_waiting_time,pool_avg_waiting_time_pretty,dine_avg_waiting_time,dine_avg_waiting_time_pretty,total_revenue,downgraded_from_premium,downgraded_from_deluxe
+f2529bbb-82d8-4dda-b984-ffae83abb66a,5.08970832824707,5.09 second(s),0.23816299438476565,0.24 second(s),0.24291590640419405,0.24 second(s),0.21077871322631836,0.21 second(s),0.1955256742589614,0.20 second(s),8321,0,0
