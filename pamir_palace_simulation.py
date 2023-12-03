@@ -516,9 +516,6 @@ def print_average_waiting_times():
         export_data[f"{activity}_avg_waiting_time_pretty"] = display_time
         export_data[f"{activity}_avg_waiting_time"] = str(average_time_hours * 3600)
 
-# Initialize the configuration for the hotel
-config = HotelConfig()
-
 # Main entry point of the script
 if __name__ == "__main__":
     # Generate a unique simulation ID using UUID
