@@ -1,33 +1,35 @@
 # Pamir Palace
-Pamir Palace is a hotel resort simulation showcasing the efficiency of parallel computing in managing high-demand hospitality environments.
+Pamir Palace is a dynamic hotel resort simulation that demonstrates the capabilities of parallel computing in efficiently managing complex, high-demand hospitality environments.
 
-*Disclaimer: This simulation is developed focusing on parallel computing techniques.*
+*Disclaimer: This simulation focuses on advanced parallel computing techniques.*
 
 # Table of Contents
 1. [Project Overview](#project-overview)
 2. [Simulation Features](#simulation-features)
 3. [Technology Stack](#technology-stack)
 4. [Installation & Usage](#installation-&-usage)
-5. [Simulation Constants](#simulation-constants)
-6. [Further Improvements](#further-improvements)
-7. [Credits](#credits)
+5. [Simulation Configuration](#simulation-configuration)
+6. [Database Interaction](#database-interaction)
+7. [Further Improvements](#further-improvements)
+8. [Credits](#credits)
 
 # Project Overview
-Pamir Palace models key operations of a hotel, demonstrating parallel computing in guest interaction and resource allocation. The simulation addresses managing varying guest needs and schedules in a high-demand environment.
+Pamir Palace realistically simulates the operations of a hotel, showcasing the effectiveness of parallel computing in handling guest interactions, resource allocation, and emergency scenarios in a high-demand setting.
 
 # Simulation Features
-- Check-in/Check-out Processes
-- Room Allocation with Different Costs
-- Dynamic Guest Activities
-- Resource Management with Semaphores
-- Emergency Handling Scenarios
-- Parallel Computing to Simulate Concurrent Operations
+- Efficient Check-in/Check-out Processes
+- Dynamic Room Allocation with Variable Costs
+- Diverse Guest Activities Including Emergencies
+- Advanced Resource Management Using Semaphores
+- Real-time Emergency Handling and Response
+- Concurrent Operation Simulation Using Parallel Computing
 
 # Technology Stack
 - **Programming Language**: Python
-- **Concurrency Framework**: Threading
-- **Development Environment**: Any Python-supported IDE or Text Editor
-- **Version Control**: Git (for source code management)
+- **Concurrency Framework**: Threading, concurrent.futures
+- **Database Interaction**: MySQL for data management
+- **Development Environment**: Compatible with any Python-supported IDE or Text Editor
+- **Version Control**: Git for source code management
 
 # Installation & Usage
 **Clone the Repository**
@@ -53,24 +55,37 @@ python pamir_palace_simulation.py
 ``````
 
 
-# Simulation Constants
-- Pool Seats: 15
-- Buffet Seats: 15
-- Receptionists: 2
-- Gym Equipment Seats: 5
-- Bus Capacity: 20
-- Activity Costs and Probabilities: Various (see code for details)
+# Simulation Configuration
+- Pool Seats: 50
+- Restaurant Seats: 50
+- Chefs: 50
+- Receptionists: 50
+- Gym Equipment Seats: 50
+- Bus Capacity: 20 (constant)
+- Maximum Nights Stay: 5 (constant)
+- Room Types: Standard, Deluxe, Premium
+- Costs & Probabilities: Detailed activity costs and guest probabilities (refer to code)
+
+# Database Interaction
+The simulation interacts with a MySQL database to store and manage simulation data. This interaction is handled through a separate Python file, which includes functions for creating and deleting the database, adding simulation data, retrieving and printing data, and saving data to a CSV file for analysis. The database schema is designed to store various metrics such as average waiting times for different activities, total revenue, and data about room downgrades.
+
+- **Database Creation**: Function to create a table with appropriate fields for simulation data.
+- **Data Management**: Functions to insert, retrieve, and print data from the database.
+- **Exporting Data**: Capability to export simulation data to a CSV file for further analysis.
+
+This integration allows for effective tracking and analysis of the simulation’s performance, aiding in understanding and optimizing the simulated hotel environment.
+
 
 # Further Improvements
-- [ ] Implement a GUI for real-time simulation monitoring and interaction.
-- [ ] Add a feature for dynamic adjustment of resource capacities (e.g., pool seats, gym equipment).
-- [ ] Integrate a database for persistent storage of guest data and simulation results.
-- [ ] Develop an analytics dashboard for performance metrics and guest behavior patterns.
-- [ ] Incorporate AI algorithms for predictive analysis of guest preferences and resource utilization.
-- [ ] Enhance emergency handling with more scenarios and automated response protocols.
+- [ ] Implement a GUI for interactive simulation monitoring.
+- [ ] Dynamic resource capacity adjustments (e.g., pool seats, restaurant seats).
+- [ ] Database integration for tracking simulation data and guest analytics.
+- [ ] Comprehensive analytics dashboard for insights into performance and guest behaviors.
+- [ ] Application of AI for predictive guest behavior analysis and resource optimization.
+- [ ] Expansion of emergency scenarios with automated protocols for enhanced realism.
 
 # Credits
-This project was created for our Operating Systems and Parallel Computing course at IE University. The project was created by:
+This project was developed for the Operating Systems and Parallel Computing course at IE University. Team members:
 - Alfonso del Saz
 - Alvaro Garris
 - Batriz Wahle
